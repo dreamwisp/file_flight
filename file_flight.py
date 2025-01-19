@@ -11,7 +11,7 @@ class App(ctk.CTk):
         self.grid_rowconfigure(1, weight=1)
         #self.grid_rowconfigure(2, weight=1)
         self.grid_rowconfigure(3, weight=1)
-        self.grid_rowconfigure(5, weight=1)
+        #self.grid_rowconfigure(5, weight=1)
         self.grid_rowconfigure(7, weight=1)# new
         self.grid_rowconfigure(8, weight=1)
 
@@ -47,18 +47,22 @@ class App(ctk.CTk):
         # option 1, 2,3 how many strs contained or similar + # checkbox of exact or similar
         self.NstrContained = ctk.CTkOptionMenu(self, values=optionsNofStr, command=self.str_containers)
         self.NstrContained.set("Number of str contained")
-        self.NstrContained.grid(row=4, column=5)
+        self.NstrContained.grid(row=4, column=5, sticky="n")
         
 
         # Search Button 
-        self.searchButton = ctk.CTkButton(self, text='search', command=self.search_files)
-        self.searchButton.grid(row=7, column=5, sticky ='n')
+        self.searchButton = ctk.CTkButton(self, text='search', command=self.search_files, width=50)
+        self.searchButton.grid(row=7, column=5, sticky ='')
 
         # Move Button 
-        self.moveButton = ctk.CTkButton(self, text='move', command=self.move_files)
-        self.moveButton.grid(row=7, column=5)
-        
+        self.moveButton = ctk.CTkButton(self, text='move', command=self.move_files, width=50)
+        self.moveButton.grid(row=7, column=5,padx=10 ,sticky='w')
 
+        # Map Button 
+        self.moveButton = ctk.CTkButton(self, text='Map', command=self.map_popup, width=50)
+        self.moveButton.grid(row=7, column=5, padx=10,sticky='e')
+        
+        # you should also add filter by day and last edited
 
 
     def move_files(self):
@@ -90,7 +94,7 @@ class App(ctk.CTk):
                 self.warning.grid(row=0, column=0, padx=10, pady=10, sticky="w")
            
         else:
-            self.warning = tk.Message(self, text="No selected items")
+            self.warning = tk.Message(self, text="No selected output path")
             self.warning.grid(row=0, column=0, padx=10, pady=10, sticky="w")
         # could implement for custom stuff but i doubt i have time so just basic moving
     
@@ -114,6 +118,10 @@ class App(ctk.CTk):
 
             selected_items = self.search_file(str_contained =str_contained, startswith=startswith,endswith=endswith)
             # delete all children labels
+            if not selected_items:
+                self.warning =tk.Message(self, text="No items found")
+                self.warning.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+
             self.CustomDirectoryFrame.kill_all_children() 
             self.CustomDirectoryFrame.add_to_visible_stack(selected_items)
             print(f"{len(selected_items)} selected items")
@@ -126,7 +134,10 @@ class App(ctk.CTk):
             self.warning.grid(row=0, column=0, padx=10, pady=10, sticky="w")
     def search_file(self, **kwargs):
          
-         
+        if not hasattr(self, 'current_path'):
+            self.warning =tk.Message(self, text="No folder selected")
+            self.warning.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+            return 
         selected_items = self.traverse_and_list(self.current_path)
         for key, val in kwargs.items():
             if val:
@@ -146,11 +157,14 @@ class App(ctk.CTk):
     def select_current_path(self):
         self.current_path = filedialog.askdirectory(title="Select a Folder")
         if self.current_path:
-            str_lst = self.print_directory(self.current_path)
-            
-            self.CustomDirectoryFrame.add_to_visible_stack(str_lst)
+            # makes it very heavy, and lags the interface
+            # str_lst = self.print_directory(self.current_path)
+            self.warning = tk.Message(self, text="Path selected")
+            self.warning.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+            #self.CustomDirectoryFrame.add_to_visible_stack(str_lst)
         else:
-            self.warning = ctk.Message(self, text="No path selected")
+            self.warning = tk.Message(self, text="No path selected")
+            self.warning.grid(row=0, column=0, padx=10, pady=10, sticky="w")
             return 
 
     def str_containers(self, ncontainers):
@@ -159,9 +173,12 @@ class App(ctk.CTk):
             self.str_container_holder = []
         # Create or destroy containers
         if len(self.str_container_holder) < int(ncontainers):
+            directions = {0:'n' ,1:'s',2:'n'}
             for c in range(int(ncontainers) - len(self.str_container_holder)):
+                
                 container = ctk.CTkEntry(self, placeholder_text="string contained")
-                container.grid(row=5 + c, column=5)
+                print("c: ", c)
+                container.grid(row=5 + c, column=5, sticky= directions[c])
                 self.str_container_holder.append(container) 
         else:
             n = len(self.str_container_holder) - int(ncontainers)
@@ -171,17 +188,17 @@ class App(ctk.CTk):
 
 
     def traverse_and_list(self, root):
-        stack = [(root, 0)]
+        stack = [root]
         dir_list = []
         while stack:
-            current_path, depth = stack.pop()
+            current_path = stack.pop()
             
             dir_list.append(current_path)
             #print(f"{'    ' * depth} - {os.path.basename(current_path)}")
             if os.path.isdir(current_path):
                
                 for item in os.listdir(current_path):
-                    stack.append((os.path.join(current_path, item), depth + 1))
+                    stack.append(os.path.join(current_path, item))
         return dir_list
 
     def select_output_path(self):
@@ -189,41 +206,14 @@ class App(ctk.CTk):
         # sort based on 
         # should I add to rename files??
         
-        
+    def map_popup(self):
+        self.popup = tk.Toplevel() 
+        self.popup.wm_title("Mapping")
 
 
-    def print_directory(self, current_path):
 
-        # Traverse if given path is directory
-        if os.path.isdir(current_path):             
-            str_lst = self.traverse_directory(current_path)
-            return str_lst
-            
-        else:
-            self.warning = ctk.Message(self, text="Selected folder is not a directory")
-            return 
-        
-    def traverse_directory(self, root):
-        stack = [(root, 0)]
-        str_lst = []
-        while stack:
-            current_path, depth = stack.pop()
-            
-            
-            str_temp = (f"{'      ' * depth}|-- {os.path.basename(current_path)}")
-                
-            str_lst.append(str_temp)
-            #print(f"{'    ' * depth} - {os.path.basename(current_path)}")
-            if os.path.isdir(current_path):
-                str_lst[-1] = str_lst[-1] + ' /'
-                for item in os.listdir(current_path):
-                    stack.append((os.path.join(current_path, item), depth + 1))
-            
-        print("Done!")
-        print("\n")
-        return str_lst
 
-    
+
 
  
 # Custom class to add  directory structure
